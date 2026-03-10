@@ -19,7 +19,7 @@ function validateRow(row) {
   if (!Number.isFinite(inStock) || inStock < 0)
     errs.push("inStock must be a non-negative number");
 
-  if (errs.length) return { ok: false, error: errs.join(", ") };
+  if (errs.length>0) return { ok: false, error: errs.join(", ") };
 
   clean.title = title;
   clean.slug = slug;
@@ -236,8 +236,8 @@ async function applyItemUpdates(tx, batchId, updates) {
     const current = byId.get(upd.itemId);
     if (!current) continue;
 
-    const price = Math.round(Number(upd.price));
-    const inStock = Number(upd.inStock) === 1 ? 1 : 0;
+    const price = Math.round(Number(upd.price) * 100) / 100;
+    const inStock =Math.max(0, Math.floor(Number(upd.inStock) || 0));
 
     if (current.productId) {
       await tx.product.update({

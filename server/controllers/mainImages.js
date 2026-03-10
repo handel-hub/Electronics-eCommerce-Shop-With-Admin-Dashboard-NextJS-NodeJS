@@ -1,4 +1,4 @@
-const { PrismaClient } = require("@prisma/client");
+;
 const prisma = require("../utills/db"); // ✅ Use shared connection
 
 async function uploadMainImage(req, res) {

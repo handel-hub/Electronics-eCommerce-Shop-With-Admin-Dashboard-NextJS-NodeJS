@@ -404,11 +404,13 @@ const searchProducts = asyncHandler(async (request, response) => {
         {
           title: {
             contains: query,
+            mode: 'insensitive',
           },
         },
         {
           description: {
             contains: query,
+            mode: 'insensitive',
           },
         },
       ],

@@ -1,7 +1,7 @@
 // List all users in the database
-const { PrismaClient } = require("@prisma/client");
+;
 
-const prisma = new PrismaClient();
+const prisma = require("../utills/db");
 
 async function listUsers() {
   try {

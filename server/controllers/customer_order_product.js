@@ -1,5 +1,5 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+
+const prisma = require("../utills/db");
 const { asyncHandler, AppError } = require("../utills/errorHandler");
 
 const createOrderProduct = asyncHandler(async (request, response) => {
