@@ -1,8 +1,6 @@
 // Create an admin user directly
-;
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
-
 const prisma = require("../utills/db");
 
 async function createAdminUser() {

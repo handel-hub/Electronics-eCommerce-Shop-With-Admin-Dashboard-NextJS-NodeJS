@@ -6,7 +6,6 @@ const {
   createProduct,
   updateProduct,
   deleteProduct,
-  searchProducts,
   getProductById,
 } = require("../controllers/products");
 

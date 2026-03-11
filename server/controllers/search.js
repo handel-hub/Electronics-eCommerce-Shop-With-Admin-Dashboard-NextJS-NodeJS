@@ -1,35 +1,34 @@
-
+const { asyncHandler, AppError } = require("../utills/errorHandler")
 const prisma = require("../utills/db");
 
-async function searchProducts(request, response) {
-    try {
-        const { query } = request.query;
-        if (!query) {
-            return response.status(400).json({ error: "Query parameter is required" });
-        }
-
-        const products = await prisma.product.findMany({
-            where: {
-                OR: [
-                    {
-                        title: {
-                            contains: query
-                        }
-                    },
-                    {
-                        description: {
-                            contains: query
-                        }
-                    }
-                ]
-            }
-        });
-
-        return response.json(products);
-    } catch (error) {
-        console.error("Error searching products:", error);
-        return response.status(500).json({ error: "Error searching products" });
+const searchProducts = asyncHandler(async (request, response) => {
+    const { query } = request.query;
+    
+    if (!query) {
+        throw new AppError("Query parameter is required", 400);
     }
-}
+
+    const products = await prisma.product.findMany({
+        where: {
+        OR: [
+            {
+            title: {
+                contains: query,
+                mode: 'insensitive',
+            },
+            },
+            {
+            description: {
+                contains: query,
+                mode: 'insensitive',
+            },
+            },
+        ],
+        },
+    });
+
+    return response.json(products);
+});
+
 
 module.exports = { searchProducts };

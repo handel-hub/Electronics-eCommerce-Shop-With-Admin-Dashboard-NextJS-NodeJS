@@ -1,7 +1,7 @@
-
 const prisma = require("../utills/db");
 const { validateOrderData, ValidationError } = require('../utills/validation');
 const { createOrderUpdateNotification } = require('../utills/notificationHelpers');
+
 
 async function createCustomerOrder(request, response) {
   try {
@@ -70,7 +70,7 @@ async function createCustomerOrder(request, response) {
         phone: validatedData.phone,
         email: validatedData.email,
         company: validatedData.company,
-        adress: validatedData.adress,
+        address: validatedData.address,
         apartment: validatedData.apartment,
         postalCode: validatedData.postalCode,
         status: validatedData.status,
@@ -223,7 +223,7 @@ async function updateCustomerOrder(request, response) {
         phone: validatedData.phone,
         email: validatedData.email,
         company: validatedData.company,
-        adress: validatedData.adress,
+        address: validatedData.address,
         apartment: validatedData.apartment,
         postalCode: validatedData.postalCode,
         status: validatedData.status,

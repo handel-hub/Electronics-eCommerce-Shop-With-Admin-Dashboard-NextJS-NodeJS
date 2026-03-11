@@ -98,9 +98,9 @@ const deleteProductOrder = asyncHandler(async (request, response) => {
     throw new AppError("Order product not found", 404);
   }
 
-  await prisma.customer_order_product.deleteMany({
+  await prisma.customer_order_product.delete({
     where: {
-      customerOrderId: id
+      id: id
     }
   });
   return response.status(204).send();
@@ -142,7 +142,7 @@ const getAllProductOrders = asyncHandler(async (request, response) => {
           phone: true,
           email: true,
           company: true,
-          adress: true,
+          address: true,
           apartment: true,
           postalCode: true,
           dateTime: true,

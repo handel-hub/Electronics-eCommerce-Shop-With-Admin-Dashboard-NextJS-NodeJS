@@ -1,5 +1,4 @@
 // Server-side validation utilities for payment and order processing
-;
 const prisma = require("../utills/db");
 
 // Validation error class
@@ -144,10 +143,17 @@ const orderValidation = {
     
     // Check for suspicious patterns FIRST (before format validation)
     const suspiciousPatterns = [
-      /<script/i,
-      /javascript:/i,
-      /on\w+\s*=/i,
-      /data:/i,
+      /<script/i,        
+      /javascript:/i,      
+      /on\w+\s*=/i,         
+      /data:/i,             
+      /<\w+[^>]*>/,         
+      /union.*select/i,    
+      /drop.*table/i,       
+      /insert.*into/i,      
+      /select.*from/i,      
+      /\.\.\//,             
+      /\.\.\\/, 
     ];
     
     if (suspiciousPatterns.some(pattern => pattern.test(trimmedEmail))) {
@@ -185,11 +191,17 @@ const orderValidation = {
 
     // Check for dangerous patterns first
     const dangerousPatterns = [
-      /<script/i,
-      /javascript:/i,
-      /on\w+\s*=/i,
-      /data:/i,
-      /<\w+[^>]*>/,
+      /<script/i,        
+      /javascript:/i,      
+      /on\w+\s*=/i,         
+      /data:/i,             
+      /<\w+[^>]*>/,         
+      /union.*select/i,    
+      /drop.*table/i,       
+      /insert.*into/i,      
+      /select.*from/i,      
+      /\.\ .\//,             
+      /\.\.\\/, 
     ];
     
     if (dangerousPatterns.some(pattern => pattern.test(trimmedName))) {
@@ -245,10 +257,17 @@ const orderValidation = {
 
     // Check for suspicious patterns
     const suspiciousPatterns = [
-      /<script/i,
-      /javascript:/i,
-      /on\w+\s*=/i,
-      /data:/i,
+      /<script/i,        
+      /javascript:/i,      
+      /on\w+\s*=/i,         
+      /data:/i,             
+      /<\w+[^>]*>/,         
+      /union.*select/i,    
+      /drop.*table/i,       
+      /insert.*into/i,      
+      /select.*from/i,      
+      /\.\.\//,             
+      /\.\.\\/, 
     ];
     
     if (suspiciousPatterns.some(pattern => pattern.test(trimmedAddress))) {
@@ -347,8 +366,8 @@ const validateOrderData = (orderData) => {
   validatedData.lastname = safeValidate(orderValidation.validateName, orderData.lastname, 'lastname');
   validatedData.email = safeValidate(orderValidation.validateEmail, orderData.email, 'email');
   validatedData.phone = safeValidate(orderValidation.validatePhone, orderData.phone, 'phone');
-  validatedData.company = safeValidate(orderValidation.validateAddress, orderData.company, 'company');
-  validatedData.adress = safeValidate(orderValidation.validateAddress, orderData.adress, 'address');
+  validatedData.company = orderData.company?safeValidate(orderValidation.validateAddress, orderData.company, 'company'):null;
+  validatedData.address = safeValidate(orderValidation.validateAddress, orderData.address, 'address');
   validatedData.apartment = safeValidate(orderValidation.validateAddress, orderData.apartment, 'apartment');
   validatedData.city = safeValidate(orderValidation.validateAddress, orderData.city, 'city');
   validatedData.country = safeValidate(orderValidation.validateAddress, orderData.country, 'country');
@@ -441,3 +460,5 @@ module.exports = {
   validateOrderData,
   validatePaymentData
 };
+
+  

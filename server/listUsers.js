@@ -1,6 +1,4 @@
 // List all users in the database
-;
-
 const prisma = require("../utills/db");
 
 async function listUsers() {

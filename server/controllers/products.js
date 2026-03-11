@@ -348,7 +348,7 @@ const updateProduct = asyncHandler(async (request, response) => {
       id,
     },
     data: {
-      merchantId: merchantId,
+      merchantId: process.env.STORE_MERCHANT_ID,
       title: title,
       mainImage: mainImage,
       slug: slug,
@@ -391,34 +391,6 @@ const deleteProduct = asyncHandler(async (request, response) => {
   return response.status(204).send();
 });
 
-const searchProducts = asyncHandler(async (request, response) => {
-  const { query } = request.query;
-  
-  if (!query) {
-    throw new AppError("Query parameter is required", 400);
-  }
-
-  const products = await prisma.product.findMany({
-    where: {
-      OR: [
-        {
-          title: {
-            contains: query,
-            mode: 'insensitive',
-          },
-        },
-        {
-          description: {
-            contains: query,
-            mode: 'insensitive',
-          },
-        },
-      ],
-    },
-  });
-
-  return response.json(products);
-});
 
 const getProductById = asyncHandler(async (request, response) => {
   const { id } = request.params;

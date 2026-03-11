@@ -24,8 +24,8 @@ const getUserNotifications = async (req, res) => {
       ...(isRead !== undefined && { isRead: isRead === 'true' }),
       ...(search && {
         OR: [
-          { title: { contains: search } },
-          { message: { contains: search } }
+          { title: { contains: search ,mode: 'insensitive'} },
+          { message: { contains: search,mode: 'insensitive' } }
         ]
       })
     };
@@ -131,10 +131,20 @@ const createNotification = async (req, res) => {
 const updateNotification = async (req, res) => {
   try {
     const { id } = req.params;
-    const { isRead } = req.body;
+    const { isRead, userId } = req.body;  // userId from request
 
     if (typeof isRead !== 'boolean') {
       return res.status(400).json({ error: 'isRead must be a boolean value' });
+    }
+
+    // Verify ownership first
+    const existing = await prisma.notification.findFirst({
+      where: { id, userId }  // both id AND userId must match
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Notification not found' });
+      // 404 not 403 — don't reveal the notification exists
     }
 
     const notification = await prisma.notification.update({
@@ -144,14 +154,10 @@ const updateNotification = async (req, res) => {
 
     res.json(notification);
   } catch (error) {
-    if (error.code === 'P2025') {
-      return res.status(404).json({ error: 'Notification not found' });
-    }
     console.error('Error updating notification:', error);
     res.status(500).json({ error: 'Failed to update notification' });
   }
 };
-
 /**
  * Bulk mark notifications as read
  */
