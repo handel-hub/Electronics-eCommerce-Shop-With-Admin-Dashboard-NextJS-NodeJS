@@ -114,6 +114,7 @@ async function createBatchWithItems(tx, batchId, validRows, errorRows) {
           description: row.description ?? "",
           manufacturer: row.manufacturer ?? "",
           mainImage: row.mainImage ?? "",
+          merchantId: process.env.STORE_MERCHANT_ID,
           categoryId: resolvedCategoryId, // Use resolved category ID
           inStock: row.inStock,
         },
@@ -129,6 +130,7 @@ async function createBatchWithItems(tx, batchId, validRows, errorRows) {
           manufacturer: row.manufacturer,
           description: row.description,
           mainImage: row.mainImage,
+          merchantId: process.env.STORE_MERCHANT_ID,
           categoryId: resolvedCategoryId, // Use resolved category ID
           inStock: row.inStock,
           status: "CREATED",

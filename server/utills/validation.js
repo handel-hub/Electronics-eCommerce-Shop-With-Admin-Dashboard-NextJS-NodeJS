@@ -1,6 +1,18 @@
 // Server-side validation utilities for payment and order processing
-const prisma = require("../utills/db");
-
+// At the top of the file — define once, reuse everywhere
+const SUSPICIOUS_PATTERNS = [
+  /<script/i,
+  /javascript:/i,
+  /on\w+\s*=/i,
+  /data:/i,
+  /<\w+[^>]*>/,
+  /union.*select/i,
+  /drop.*table/i,
+  /insert.*into/i,
+  /select.*from/i,
+  /\.\.\//,
+  /\.\.\\/,
+];
 // Validation error class
 class ValidationError extends Error {
   constructor(message, field = null) {
@@ -140,23 +152,8 @@ const orderValidation = {
     }
 
     const trimmedEmail = email.trim().toLowerCase();
-    
-    // Check for suspicious patterns FIRST (before format validation)
-    const suspiciousPatterns = [
-      /<script/i,        
-      /javascript:/i,      
-      /on\w+\s*=/i,         
-      /data:/i,             
-      /<\w+[^>]*>/,         
-      /union.*select/i,    
-      /drop.*table/i,       
-      /insert.*into/i,      
-      /select.*from/i,      
-      /\.\.\//,             
-      /\.\.\\/, 
-    ];
-    
-    if (suspiciousPatterns.some(pattern => pattern.test(trimmedEmail))) {
+        
+    if (SUSPICIOUS_PATTERNS.some(pattern => pattern.test(trimmedEmail))) {
       throw new ValidationError('Email contains invalid characters', 'email');
     }
     
@@ -188,23 +185,8 @@ const orderValidation = {
     if (trimmedName.length > 50) {
       throw new ValidationError(`${fieldName} must be less than 50 characters`, fieldName);
     }
-
-    // Check for dangerous patterns first
-    const dangerousPatterns = [
-      /<script/i,        
-      /javascript:/i,      
-      /on\w+\s*=/i,         
-      /data:/i,             
-      /<\w+[^>]*>/,         
-      /union.*select/i,    
-      /drop.*table/i,       
-      /insert.*into/i,      
-      /select.*from/i,      
-      /\.\ .\//,             
-      /\.\.\\/, 
-    ];
     
-    if (dangerousPatterns.some(pattern => pattern.test(trimmedName))) {
+    if (SUSPICIOUS_PATTERNS.some(pattern => pattern.test(trimmedName))) {
       throw new ValidationError(`${fieldName} contains invalid characters`, fieldName);
     }
 
@@ -254,23 +236,8 @@ const orderValidation = {
     if (trimmedAddress.length > 200) {
       throw new ValidationError(`${fieldName} must be less than 200 characters`, fieldName);
     }
-
-    // Check for suspicious patterns
-    const suspiciousPatterns = [
-      /<script/i,        
-      /javascript:/i,      
-      /on\w+\s*=/i,         
-      /data:/i,             
-      /<\w+[^>]*>/,         
-      /union.*select/i,    
-      /drop.*table/i,       
-      /insert.*into/i,      
-      /select.*from/i,      
-      /\.\.\//,             
-      /\.\.\\/, 
-    ];
     
-    if (suspiciousPatterns.some(pattern => pattern.test(trimmedAddress))) {
+    if (SUSPICIOUS_PATTERNS.some(pattern => pattern.test(trimmedAddress))) {
       throw new ValidationError(`${fieldName} contains invalid characters`, fieldName);
     }
 
@@ -321,18 +288,27 @@ const orderValidation = {
 
   // Validate order status
   validateStatus: (status) => {
-    const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
-    
+    const validStatuses = [
+      'PENDING', 'PAID', 'PROCESSING',
+      'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUNDED'
+    ];
+
     if (!status || typeof status !== 'string') {
       throw new ValidationError('Order status is required', 'status');
     }
 
-    if (!validStatuses.includes(status.toLowerCase())) {
-      throw new ValidationError(`Invalid order status. Must be one of: ${validStatuses.join(', ')}`, 'status');
+    const upperStatus = status.toUpperCase();  // normalize input
+
+    if (!validStatuses.includes(upperStatus)) {
+      throw new ValidationError(
+        `Invalid order status. Must be one of: ${validStatuses.join(', ')}`,
+        'status'
+      );
     }
 
-    return status.toLowerCase();
+    return upperStatus;  // always return uppercase to match enum
   }
+
 };
 
 // Comprehensive order validation - FIXED VERSION
@@ -376,9 +352,19 @@ const validateOrderData = (orderData) => {
   validatedData.status = safeValidate(orderValidation.validateStatus, orderData.status || 'pending', 'status');
   
   // Optional fields
-  validatedData.orderNotice = orderData.orderNotice ? 
-    orderData.orderNotice.trim().substring(0, 500) : ''; // Limit to 500 characters
 
+  if (orderData.orderNotice) {
+    const trimmedNotice = orderData.orderNotice.trim().substring(0, 500);
+    if (SUSPICIOUS_PATTERNS.some(pattern => pattern.test(trimmedNotice))) {
+      errors.push({ field: 'orderNotice', message: 'Order notice contains invalid characters' });
+      validatedData.orderNotice = '';
+    } else {
+      validatedData.orderNotice = trimmedNotice;
+    }
+  } else {
+    validatedData.orderNotice = '';
+  }
+  
   return {
     isValid: errors.length === 0,
     errors,
@@ -454,6 +440,7 @@ const validatePaymentData = (paymentData) => {
 };
 
 module.exports = {
+  SUSPICIOUS_PATTERNS,
   ValidationError,
   paymentValidation,
   orderValidation,

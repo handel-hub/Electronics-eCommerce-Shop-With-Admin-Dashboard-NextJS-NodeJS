@@ -3,7 +3,7 @@ const path = require('path');
 // Load env from server/.env then fallback to project root .env
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
-const bcrypt = require('bcryptjs');
+
 const fileUpload = require("express-fileupload");
 const productsRouter = require("./routes/products");
 const productImagesRouter = require("./routes/productImages");

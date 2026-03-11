@@ -1,138 +1,188 @@
+// middleware/rateLimiter.js
+
 const rateLimit = require('express-rate-limit');
 
-// General API rate limiter - applies to all API routes
+// 1. General baseline — all routes
 const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 300, // Limit each IP to 300 requests per windowMs
-  message: {
-    error: 'Too many requests from this IP, please try again later.',
-    retryAfter: '15 minutes'
-  },
-  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-  handler: (req, res) => {
-    res.status(429).json({
-      error: 'Too many requests from this IP, please try again later.',
-      retryAfter: '15 minutes'
-    });
-  }
-});
-
-// Strict rate limiter for authentication endpoints
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 300, // Limit each IP to 300 login attempts per windowMs
-  message: {
-    error: 'Too many authentication attempts, please try again later.',
-    retryAfter: '15 minutes'
-  },
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  keyGenerator: (req) => req.ip,
   standardHeaders: true,
   legacyHeaders: false,
-  skipSuccessfulRequests: true, // Don't count successful requests
-  handler: (req, res) => {
-    res.status(429).json({
-      error: 'Too many authentication attempts, please try again later.',
-      retryAfter: '15 minutes'
-    });
-  }
-});
-
-// Strict rate limiter for user registration
-const registerLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 20, // Limit each IP to 20 registration attempts per hour
-  message: {
-    error: 'Too many registration attempts, please try again later.',
-    retryAfter: '1 hour'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-  handler: (req, res) => {
-    res.status(429).json({
-      error: 'Too many registration attempts, please try again later.',
-      retryAfter: '1 hour'
-    });
-  }
-});
-
-// Moderate rate limiter for user management endpoints
-const userManagementLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 300, // Limit each IP to 300 requests per windowMs
-  message: {
-    error: 'Too many user management requests, please try again later.',
+  handler: (req, res) => res.status(429).json({
+    error: 'Too many requests, please try again later.',
     retryAfter: '15 minutes'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-  handler: (req, res) => {
-    res.status(429).json({
-      error: 'Too many user management requests, please try again later.',
-      retryAfter: '15 minutes'
-    });
-  }
+  })
 });
 
-// Rate limiter for file uploads
-const uploadLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 300, // Limit each IP to 300 uploads per windowMs
-  message: {
-    error: 'Too many file uploads, please try again later.',
+// 2. Browse — public read operations
+const browseLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  keyGenerator: (req) => req.ip,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => res.status(429).json({
+    error: 'Too many requests, please try again later.',
     retryAfter: '15 minutes'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-  handler: (req, res) => {
-    res.status(429).json({
-      error: 'Too many file uploads, please try again later.',
-      retryAfter: '15 minutes'
-    });
-  }
+  })
 });
 
-// Rate limiter for search endpoints
+// 3. Search — expensive DB operation
 const searchLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  max: 300, // Limit each IP to 300 search requests per minute
-  message: {
+  windowMs: 1 * 60 * 1000,
+  max: 30,
+  keyGenerator: (req) => req.ip,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => res.status(429).json({
     error: 'Too many search requests, please try again later.',
     retryAfter: '1 minute'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-  handler: (req, res) => {
-    res.status(429).json({
-      error: 'Too many search requests, please try again later.',
-      retryAfter: '1 minute'
-    });
-  }
+  })
 });
 
-// Rate limiter for order operations
-const orderLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 300, // Limit each IP to 300 order operations per windowMs
-  message: {
-    error: 'Too many order operations, please try again later.',
-    retryAfter: '15 minutes'
+// 4. Register — account creation (IP + email)
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 3,
+  keyGenerator: (req) => {
+    const email = req.body?.email?.toLowerCase().trim() || '';
+    return `${req.ip}:${email}`;
   },
   standardHeaders: true,
   legacyHeaders: false,
-  handler: (req, res) => {
-    res.status(429).json({
-      error: 'Too many order operations, please try again later.',
-      retryAfter: '15 minutes'
-    });
-  }
+  handler: (req, res) => res.status(429).json({
+    error: 'Too many registration attempts, please try again later.',
+    retryAfter: '1 hour'
+  })
 });
+
+// 5. Auth — email lookup / login (IP + email)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  skipSuccessfulRequests: true,
+  keyGenerator: (req) => {
+    const email = req.params?.email?.toLowerCase().trim() || '';
+    return `${req.ip}:${email}`;
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => res.status(429).json({
+    error: 'Too many authentication attempts, please try again later.',
+    retryAfter: '15 minutes'
+  })
+});
+
+// 6. Password reset (IP + email)
+const passwordResetLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 3,
+  keyGenerator: (req) => {
+    const email = req.body?.email?.toLowerCase().trim() || '';
+    return `${req.ip}:${email}`;
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => res.status(429).json({
+    error: 'Too many password reset attempts, please try again later.',
+    retryAfter: '1 hour'
+  })
+});
+
+// 7. Order — checkout (IP + email)
+const orderLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  keyGenerator: (req) => {
+    const email = req.body?.email?.toLowerCase().trim() || '';
+    return `${req.ip}:${email}`;
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => res.status(429).json({
+    error: 'Too many order attempts, please try again later.',
+    retryAfter: '15 minutes'
+  })
+});
+
+// 8. Upload — file uploads
+const uploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  keyGenerator: (req) => req.ip,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => res.status(429).json({
+    error: 'Too many upload requests, please try again later.',
+    retryAfter: '15 minutes'
+  })
+});
+
+// 9. User — authenticated user actions
+const userLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  keyGenerator: (req) => req.ip,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => res.status(429).json({
+    error: 'Too many requests, please try again later.',
+    retryAfter: '15 minutes'
+  })
+});
+
+// 10. Admin — admin panel operations
+const adminLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  keyGenerator: (req) => req.ip,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => res.status(429).json({
+    error: 'Too many admin operations, please try again later.',
+    retryAfter: '15 minutes'
+  })
+});
+
+// 11. Wishlist — for when wishlist is built
+const wishlistLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 40,
+  keyGenerator: (req) => req.ip,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => res.status(429).json({
+    error: 'Too many wishlist operations, please try again later.',
+    retryAfter: '5 minutes'
+  })
+});
+
+// 12. Dynamic — create custom limiter on the fly
+const createDynamicLimiter = (windowMs, max, message) => {
+  return rateLimit({
+    windowMs,
+    max,
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (req, res) => res.status(429).json({
+      error: message,
+      retryAfter: `${Math.ceil(windowMs / 60000)} minutes`
+    })
+  });
+};
 
 module.exports = {
   generalLimiter,
-  authLimiter,
-  registerLimiter,
-  userManagementLimiter,
-  uploadLimiter,
+  browseLimiter,
   searchLimiter,
-  orderLimiter
+  registerLimiter,
+  authLimiter,
+  passwordResetLimiter,
+  orderLimiter,
+  uploadLimiter,
+  userLimiter,
+  adminLimiter,
+  wishlistLimiter,
+  createDynamicLimiter,
 };

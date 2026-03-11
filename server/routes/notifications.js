@@ -10,6 +10,12 @@ const {
   getUnreadCount
 } = require('../controllers/notificationController');
 
+// POST /api/notifications/mark-read - Bulk mark notifications as read
+router.post('/mark-read', bulkMarkAsRead);
+
+// DELETE /api/notifications/bulk - Bulk delete notifications
+router.delete('/bulk', bulkDeleteNotifications);
+
 // GET /api/notifications/:userId/unread-count - Get unread notification count
 router.get('/:userId/unread-count', getUnreadCount);
 
@@ -18,12 +24,6 @@ router.get('/:userId', getUserNotifications);
 
 // POST /api/notifications - Create new notification
 router.post('/', createNotification);
-
-// POST /api/notifications/mark-read - Bulk mark notifications as read
-router.post('/mark-read', bulkMarkAsRead);
-
-// DELETE /api/notifications/bulk - Bulk delete notifications
-router.delete('/bulk', bulkDeleteNotifications);
 
 // PUT /api/notifications/:id - Update notification (mark as read/unread)
 router.put('/:id', updateNotification);

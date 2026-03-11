@@ -11,6 +11,9 @@ const {
     getUserByEmail
   } = require('../controllers/users');
 
+  router.route('/email/:email')
+  .get(getUserByEmail);
+  
   router.route('/')
   .get(getAllUsers)
   .post(createUser);
@@ -20,8 +23,7 @@ const {
   .put(updateUser) 
   .delete(deleteUser);
 
-  router.route('/email/:email')
-  .get(getUserByEmail);
+  
 
 
   module.exports = router;

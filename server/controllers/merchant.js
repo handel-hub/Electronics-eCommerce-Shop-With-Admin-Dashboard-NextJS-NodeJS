@@ -1,4 +1,3 @@
-;
 const prisma = require("../utills/db");
 
 async function getAllMerchants(request, response) {
@@ -65,6 +64,14 @@ async function updateMerchant(request, response) {
     const { id } = request.params;
     const { name, email, phone, address, description, status } = request.body;
 
+    const existingMerchant = await prisma.merchant.findUnique({
+      where: { id }
+    });
+
+    if (!existingMerchant) {
+      return response.status(404).json({ error: "Merchant not found" });
+    }
+
     const merchant = await prisma.merchant.update({
       where: {
         id: id,
@@ -91,12 +98,12 @@ async function deleteMerchant(request, response) {
     const { id } = request.params;
     
     // Check if merchant has products before deletion
-    const merchant = await prisma.merchant.findUnique({
-      where: { id },
-      include: { products: true },
+    const hasProducts = await prisma.product.findFirst({
+      where: { merchantId: id },
+      select: { id: true }
     });
-
-    if (merchant?.products.length > 0) {
+    
+    if (hasProducts) {
       return response.status(400).json({
         error: "Cannot delete merchant with existing products",
       });

@@ -1,6 +1,8 @@
 const prisma = require("../utills/db"); // ✅ Use shared connection with SSL
 const { asyncHandler, handleServerError, AppError } = require("../utills/errorHandler");
 
+const PAGE_SIZE = 12
+
 // Security: Define whitelists for allowed filter types and operators
 const ALLOWED_FILTER_TYPES = ['price', 'rating', 'category', 'inStock', 'outOfStock'];
 const ALLOWED_OPERATORS = ['gte', 'lte', 'gt', 'lt', 'equals', 'contains'];
@@ -191,8 +193,8 @@ const getAllProducts = asyncHandler(async (request, response) => {
 
     if (Object.keys(filterObj).length === 0) {
       products = await prisma.product.findMany({
-        skip: (validatedPage - 1) * 10,
-        take: 12,
+        skip: (validatedPage - 1) * PAGE_SIZE,
+        take: PAGE_SIZE,
         include: {
           category: {
             select: {
@@ -246,22 +248,8 @@ const getAllProducts = asyncHandler(async (request, response) => {
   }
 });
 
-const getAllProductsOld = asyncHandler(async (request, response) => {
-  const products = await prisma.product.findMany({
-    include: {
-      category: {
-        select: {
-          name: true,
-        },
-      },
-    },
-  });
-  response.status(200).json(products);
-});
-
 const createProduct = asyncHandler(async (request, response) => {
   const {
-    merchantId,
     slug,
     title,
     mainImage,
@@ -277,10 +265,6 @@ const createProduct = asyncHandler(async (request, response) => {
   }
   
   // Basic validation
-  if (!merchantId) {
-    throw new AppError("Missing required field: merchantId", 400);
-  }
-  
   if (!slug) {
     throw new AppError("Missing required field: slug", 400);
   }
@@ -295,7 +279,7 @@ const createProduct = asyncHandler(async (request, response) => {
 
   const product = await prisma.product.create({
     data: {
-      merchantId,
+      merchantId: process.env.STORE_MERCHANT_ID,
       slug,
       title,
       mainImage,
@@ -314,7 +298,6 @@ const createProduct = asyncHandler(async (request, response) => {
 const updateProduct = asyncHandler(async (request, response) => {
   const { id } = request.params;
   const {
-    merchantId,
     slug,
     title,
     mainImage,
@@ -420,6 +403,5 @@ module.exports = {
   createProduct,
   updateProduct,
   deleteProduct,
-  searchProducts,
   getProductById,
 };
