@@ -1,15 +1,15 @@
-const express = require('express')
-const router = express.Router()
-const {
-  getSingleProductImages,
-  createImage,
-  updateImage,
-  deleteImage
-} = require('../controllers/productImages')
+const express = require('express');
+const router = express.Router();
+const { getSingleProductImages, createImage, updateImage, deleteImage } = require('../controllers/productImages');
+const { browseLimiter, uploadLimiter, adminLimiter } = require('../middleware/rateLimiter');
+const { authenticate, requireAdmin } = require('../middleware/auth');
 
-router.route('/').post(createImage);
+router.route('/')
+  .post(uploadLimiter, authenticate, requireAdmin, createImage);
+
 router.route('/:id')
-  .get(getSingleProductImages)
-  .put(updateImage)
-  .delete(deleteImage);
-module.exports = router
+  .get(browseLimiter, getSingleProductImages)                               // public
+  .put(uploadLimiter, authenticate, requireAdmin, updateImage)
+  .delete(adminLimiter, authenticate, requireAdmin, deleteImage);
+
+module.exports = router;

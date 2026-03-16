@@ -1,12 +1,12 @@
 // middleware/rateLimiter.js
 
-const rateLimit = require('express-rate-limit');
+const {rateLimit,ipKeyGenerator} = require('express-rate-limit');
 
 // 1. General baseline — all routes
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
-  keyGenerator: (req) => req.ip,
+  keyGenerator: (req) => ipKeyGenerator(req),
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req, res) => res.status(429).json({
@@ -19,7 +19,7 @@ const generalLimiter = rateLimit({
 const browseLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 60,
-  keyGenerator: (req) => req.ip,
+  keyGenerator: (req) => ipKeyGenerator(req),
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req, res) => res.status(429).json({
@@ -32,7 +32,7 @@ const browseLimiter = rateLimit({
 const searchLimiter = rateLimit({
   windowMs: 1 * 60 * 1000,
   max: 30,
-  keyGenerator: (req) => req.ip,
+  keyGenerator: (req) => ipKeyGenerator(req),
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req, res) => res.status(429).json({
@@ -47,7 +47,7 @@ const registerLimiter = rateLimit({
   max: 3,
   keyGenerator: (req) => {
     const email = req.body?.email?.toLowerCase().trim() || '';
-    return `${req.ip}:${email}`;
+    return `${ipKeyGenerator(req)}:${email}`;
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -64,7 +64,7 @@ const authLimiter = rateLimit({
   skipSuccessfulRequests: true,
   keyGenerator: (req) => {
     const email = req.params?.email?.toLowerCase().trim() || '';
-    return `${req.ip}:${email}`;
+    return `${ipKeyGenerator(req)}:${email}`;
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -80,7 +80,7 @@ const passwordResetLimiter = rateLimit({
   max: 3,
   keyGenerator: (req) => {
     const email = req.body?.email?.toLowerCase().trim() || '';
-    return `${req.ip}:${email}`;
+    return `${ipKeyGenerator(req)}:${email}`;
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -96,7 +96,7 @@ const orderLimiter = rateLimit({
   max: 10,
   keyGenerator: (req) => {
     const email = req.body?.email?.toLowerCase().trim() || '';
-    return `${req.ip}:${email}`;
+    return `${ipKeyGenerator(req)}:${email}`;
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -110,7 +110,7 @@ const orderLimiter = rateLimit({
 const uploadLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
-  keyGenerator: (req) => req.ip,
+  keyGenerator: (req) => ipKeyGenerator(req),
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req, res) => res.status(429).json({
@@ -123,7 +123,7 @@ const uploadLimiter = rateLimit({
 const userLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 30,
-  keyGenerator: (req) => req.ip,
+  keyGenerator: (req) => ipKeyGenerator(req),
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req, res) => res.status(429).json({
@@ -136,7 +136,7 @@ const userLimiter = rateLimit({
 const adminLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
-  keyGenerator: (req) => req.ip,
+  keyGenerator: (req) => ipKeyGenerator(req),
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req, res) => res.status(429).json({
@@ -149,7 +149,7 @@ const adminLimiter = rateLimit({
 const wishlistLimiter = rateLimit({
   windowMs: 5 * 60 * 1000,
   max: 40,
-  keyGenerator: (req) => req.ip,
+  keyGenerator: (req) => ipKeyGenerator(req),
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req, res) => res.status(429).json({

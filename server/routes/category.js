@@ -1,21 +1,16 @@
 const express = require("express");
-
 const router = express.Router();
+const { getCategory, createCategory, updateCategory, deleteCategory, getAllCategories } = require("../controllers/category");
+const { browseLimiter, adminLimiter } = require('../middleware/rateLimiter');
+const { authenticate, requireAdmin } = require('../middleware/auth');
 
-const {
-  getCategory,
-  createCategory,
-  updateCategory,
-  deleteCategory,
-  getAllCategories,
-} = require("../controllers/category");
+router.route("/")
+  .get(browseLimiter, getAllCategories)
+  .post(adminLimiter, authenticate, requireAdmin, createCategory);
 
-router.route("/").get(getAllCategories).post(createCategory);
-
-router
-  .route("/:id")
-  .get(getCategory)
-  .put(updateCategory)
-  .delete(deleteCategory);
+router.route("/:id")
+  .get(browseLimiter, getCategory)
+  .put(adminLimiter, authenticate, requireAdmin, updateCategory)
+  .delete(adminLimiter, authenticate, requireAdmin, deleteCategory);
 
 module.exports = router;

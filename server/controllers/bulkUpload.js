@@ -12,21 +12,14 @@ const {
 
 // POST /api/bulk-upload
 const uploadCsvAndCreateBatch = asyncHandler(async (req, res) => {
-  console.log("📦 Bulk upload request received");
-  console.log("Files:", req.files);
-  console.log("Body:", req.body);
-  console.log("Headers:", req.headers);
 
   const csvFile = req.files?.file;
   if (!csvFile) {
-    console.log("❌ No file uploaded");
+  
     throw new AppError("CSV file is required (field name: 'file')", 400);
   }
 
-  console.log("✅ File received:", csvFile.name, csvFile.size, "bytes");
-
   const rows = await parseCsvBufferToRows(csvFile.data);
-  console.log("📊 Parsed rows:", rows.length);
 
   if (!rows || rows.length === 0) {
     throw new AppError("CSV has no rows", 400);
@@ -40,8 +33,7 @@ const uploadCsvAndCreateBatch = asyncHandler(async (req, res) => {
     else errors.push({ index: i + 1, error });
   }
 
-  console.log("✅ Valid rows:", valid.length);
-  console.log("❌ Invalid rows:", errors.length);
+
 
   const result = await prisma.$transaction(async (tx) => {
     const createdBatch = await tx.bulk_upload_batch.create({
@@ -167,9 +159,7 @@ const deleteBatch = asyncHandler(async (req, res) => {
 
   if (!batchId) throw new AppError("Batch ID is required", 400);
 
-  console.log(
-    `🗑️ Deleting batch ${batchId}, deleteProducts: ${deleteProducts}`
-  );
+
 
   // Check if batch exists
   const batch = await prisma.bulk_upload_batch.findUnique({
@@ -182,9 +172,7 @@ const deleteBatch = asyncHandler(async (req, res) => {
 
   if (deleteProducts) {
     // Check if products can be deleted (not in orders)
-    console.log("🔍 Checking if products can be deleted...");
     const check = await canDeleteProductsForBatch(prisma, batchId);
-    console.log("Check result:", check);
 
     if (!check.canDelete) {
       const errorMsg =
@@ -205,30 +193,26 @@ const deleteBatch = asyncHandler(async (req, res) => {
       });
 
       const productIds = items.map((i) => i.productId).filter(Boolean);
-      console.log(`🗑️ Deleting ${productIds.length} products`);
 
       if (productIds.length > 0) {
         // Delete products
         const deletedProducts = await tx.product.deleteMany({
           where: { id: { in: productIds } },
         });
-        console.log(`✅ Deleted ${deletedProducts.count} products`);
       }
 
       // Delete bulk_upload_items (cascade will handle this, but explicit is better)
       const deletedItems = await tx.bulk_upload_item.deleteMany({
         where: { batchId },
       });
-      console.log(`✅ Deleted ${deletedItems.count} items`);
 
       // Delete batch
       await tx.bulk_upload_batch.delete({
         where: { id: batchId },
       });
-      console.log(`✅ Deleted batch`);
+
     });
 
-    console.log(`✅ Batch and products deleted successfully`);
     return res.status(200).json({
       success: true,
       message: "Batch and products deleted successfully",
@@ -241,16 +225,13 @@ const deleteBatch = asyncHandler(async (req, res) => {
       const deletedItems = await tx.bulk_upload_item.deleteMany({
         where: { batchId },
       });
-      console.log(`✅ Deleted ${deletedItems.count} items`);
 
       // Delete batch
       await tx.bulk_upload_batch.delete({
         where: { id: batchId },
       });
-      console.log(`✅ Deleted batch`);
     });
 
-    console.log(`✅ Batch deleted (products kept)`);
     return res.status(200).json({
       success: true,
       message: "Batch deleted successfully (products kept)",

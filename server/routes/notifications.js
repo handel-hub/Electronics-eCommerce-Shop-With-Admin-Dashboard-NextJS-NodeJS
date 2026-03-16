@@ -1,34 +1,17 @@
 const express = require('express');
 const router = express.Router();
-const {
-  getUserNotifications,
-  createNotification,
-  updateNotification,
-  bulkMarkAsRead,
-  deleteNotification,
-  bulkDeleteNotifications,
-  getUnreadCount
-} = require('../controllers/notificationController');
+const { getUserNotifications, createNotification, updateNotification, bulkMarkAsRead, deleteNotification, bulkDeleteNotifications, getUnreadCount } = require('../controllers/notificationController');
+const { userLimiter, adminLimiter } = require('../middleware/rateLimiter');
+const { authenticate, requireAdmin } = require('../middleware/auth');
 
-// POST /api/notifications/mark-read - Bulk mark notifications as read
-router.post('/mark-read', bulkMarkAsRead);
+// Specific before generic
+router.post('/mark-read', userLimiter, authenticate, bulkMarkAsRead);
+router.delete('/bulk', userLimiter, authenticate,requireAdmin, bulkDeleteNotifications);
 
-// DELETE /api/notifications/bulk - Bulk delete notifications
-router.delete('/bulk', bulkDeleteNotifications);
-
-// GET /api/notifications/:userId/unread-count - Get unread notification count
-router.get('/:userId/unread-count', getUnreadCount);
-
-// GET /api/notifications/:userId - Get user notifications with filtering and pagination
-router.get('/:userId', getUserNotifications);
-
-// POST /api/notifications - Create new notification
-router.post('/', createNotification);
-
-// PUT /api/notifications/:id - Update notification (mark as read/unread)
-router.put('/:id', updateNotification);
-
-// DELETE /api/notifications/:id - Delete single notification
-router.delete('/:id', deleteNotification);
+router.get('/:userId/unread-count', userLimiter, authenticate, getUnreadCount);
+router.get('/:userId', userLimiter, authenticate, getUserNotifications);
+router.post('/', adminLimiter, authenticate, requireAdmin, createNotification);
+router.put('/:id', userLimiter, authenticate, updateNotification);
+router.delete('/:id', userLimiter, authenticate, deleteNotification);
 
 module.exports = router;

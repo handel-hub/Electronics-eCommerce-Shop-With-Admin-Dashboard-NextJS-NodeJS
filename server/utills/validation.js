@@ -13,12 +13,15 @@ const SUSPICIOUS_PATTERNS = [
   /\.\.\//,
   /\.\.\\/,
 ];
+const VALID_STATUSES = ['PENDING', 'PAID', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUNDED'];
 // Validation error class
 class ValidationError extends Error {
   constructor(message, field = null) {
     super(message);
     this.name = 'ValidationError';
     this.field = field;
+
+    Error.captureStackTrace(this, this.constructor);
   }
 }
 
@@ -143,6 +146,191 @@ const paymentValidation = {
   }
 };
 
+const productValidation = {
+  validateSlug: (slug, fieldName = 'slug') => {
+    if (!slug || typeof slug !== 'string') {
+      throw new ValidationError(`${fieldName} is required`, fieldName);
+    }
+
+    const trimmed = slug.trim().toLowerCase();
+
+    if (SUSPICIOUS_PATTERNS.some(p => p.test(trimmed))) {
+      throw new ValidationError(`${fieldName} contains invalid characters`, fieldName);
+    }
+
+    // Allow lowercase letters, numbers, hyphens; must start and end with alnum
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(trimmed)) {
+      throw new ValidationError(`${fieldName} must contain only lowercase letters, numbers, and hyphens`, fieldName);
+    }
+
+    if (trimmed.length < 2) {
+      throw new ValidationError(`${fieldName} must be at least 2 characters`, fieldName);
+    }
+
+    if (trimmed.length > 100) {
+      throw new ValidationError(`${fieldName} must be less than 100 characters`, fieldName);
+    }
+
+    return trimmed;
+  },
+
+  validateTitle: (title, fieldName = 'title') => {
+    if (!title || typeof title !== 'string') {
+      throw new ValidationError(`${fieldName} is required`, fieldName);
+    }
+
+    const trimmedTitle = title.trim();
+
+    if (trimmedTitle.length < 2) {
+      throw new ValidationError(`${fieldName} must be at least 2 characters`, fieldName);
+    }
+
+    if (trimmedTitle.length > 150) {
+      throw new ValidationError(`${fieldName} must be less than 150 characters`, fieldName);
+    }
+
+    if (SUSPICIOUS_PATTERNS.some(pattern => pattern.test(trimmedTitle))) {
+      throw new ValidationError(`${fieldName} contains invalid characters`, fieldName);
+    }
+
+    // Allow Unicode letters, marks, numbers, spaces, hyphens, apostrophes, dots, commas, and ampersand
+    if (!/^[\p{L}\p{M}\p{N}\s\-'.,&]+$/u.test(trimmedTitle)) {
+      throw new ValidationError(`${fieldName} contains invalid characters`, fieldName);
+    }
+
+    return trimmedTitle;
+  },
+
+  validateMainImage: (mainImage, fieldName = 'mainImage') => {
+  if (!mainImage || typeof mainImage !== 'string') {
+    throw new ValidationError(`${fieldName} is required`, fieldName);
+  }
+
+  const trimmed = mainImage.trim();
+
+  if (trimmed.length === 0) {
+    throw new ValidationError(`${fieldName} is required`, fieldName);
+  }
+
+  if (SUSPICIOUS_PATTERNS.some(p => p.test(trimmed))) {
+    throw new ValidationError(`${fieldName} contains invalid characters`, fieldName);
+  }
+
+  if (trimmed.length > 1024) {
+    throw new ValidationError(`${fieldName} must be less than 1024 characters`, fieldName);
+  }
+
+  return trimmed;
+},
+
+  validatePrice: (price, fieldName = 'price') => {
+    if (price === null || price === undefined) {
+      throw new ValidationError(`${fieldName} is required`, fieldName);
+    }
+
+    const num = typeof price === 'number' ? price : parseFloat(String(price).trim());
+
+    if (Number.isNaN(num)) {
+      throw new ValidationError(`${fieldName} must be a valid number`, fieldName);
+    }
+
+    if (num < 0.1) {
+      throw new ValidationError(`${fieldName} cannot be negative`, fieldName);
+    }
+
+    if (num > 9999999.99) {
+      throw new ValidationError(`${fieldName} is too large`, fieldName);
+    }
+
+    // Round to 2 decimal places
+    return Math.round(num * 100) / 100;
+  },
+
+  validateDescription: (description, fieldName = 'description') => {
+    if (!description || typeof description !== 'string') {
+      throw new ValidationError(`${fieldName} is required`, fieldName);
+    }
+
+    const trimmedDescription = description.trim();
+
+    if (trimmedDescription.length < 2) {
+      throw new ValidationError(`${fieldName} must be at least 2 characters`, fieldName);
+    }
+
+    if (trimmedDescription.length > 2000) {
+      throw new ValidationError(`${fieldName} must be less than 2000 characters`, fieldName);
+    }
+
+    if (SUSPICIOUS_PATTERNS.some(pattern => pattern.test(trimmedDescription))) {
+      throw new ValidationError(`${fieldName} contains invalid characters`, fieldName);
+    }
+
+    // Allow broad Unicode text plus common punctuation
+    if (!/^[\p{L}\p{M}\p{N}\s\-\.,'":;()\/&%+#!?@]+$/u.test(trimmedDescription)) {
+      throw new ValidationError(`${fieldName} contains invalid characters`, fieldName);
+    }
+
+    return trimmedDescription;
+  },
+
+  validateManufacturer: (manufacturer, fieldName = 'manufacturer') => {
+    if (!manufacturer || typeof manufacturer !== 'string') {
+      throw new ValidationError(`${fieldName} is required`, fieldName);
+    }
+
+    const trimmed = manufacturer.trim();
+
+    if (trimmed.length < 2) {
+      throw new ValidationError(`${fieldName} must be at least 2 characters`, fieldName);
+    }
+
+    if (trimmed.length > 100) {
+      throw new ValidationError(`${fieldName} must be less than 100 characters`, fieldName);
+    }
+
+    if (SUSPICIOUS_PATTERNS.some(p => p.test(trimmed))) {
+      throw new ValidationError(`${fieldName} contains invalid characters`, fieldName);
+    }
+
+    if (!/^[\p{L}\p{M}\p{N}\s\-\.'&]+$/u.test(trimmed)) {
+      throw new ValidationError(`${fieldName} contains invalid characters`, fieldName);
+    }
+
+    return trimmed;
+  },
+
+  validateCategoryId: (categoryId, fieldName = 'categoryId') => {
+  if (!categoryId || typeof categoryId !== 'string') {
+    throw new ValidationError(`${fieldName} is required`, fieldName);
+  }
+  const trimmed = categoryId.trim();
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(trimmed)) {
+    throw new ValidationError(`${fieldName} must be a valid UUID`, fieldName);
+  }
+  return trimmed;
+},
+
+  validateInStock: (inStock, fieldName = 'inStock') => {
+    // Accept boolean or numeric stock count
+    if (inStock === null || inStock === undefined) {
+      throw new ValidationError(`${fieldName} is required`, fieldName);
+    }
+
+    if (typeof inStock === 'boolean') {
+      return inStock;
+    }
+
+    const num = typeof inStock === 'number' ? inStock : parseInt(String(inStock).trim(), 10);
+
+    if (Number.isNaN(num) || num < 0) {
+      throw new ValidationError(`${fieldName} must be a non negative integer or boolean`, fieldName);
+    }
+
+    return num;
+  }
+  
+};
 // Order validation utilities
 const orderValidation = {
   // Validate email format - FIXED: Check XSS patterns first
@@ -288,10 +476,6 @@ const orderValidation = {
 
   // Validate order status
   validateStatus: (status) => {
-    const validStatuses = [
-      'PENDING', 'PAID', 'PROCESSING',
-      'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUNDED'
-    ];
 
     if (!status || typeof status !== 'string') {
       throw new ValidationError('Order status is required', 'status');
@@ -299,9 +483,9 @@ const orderValidation = {
 
     const upperStatus = status.toUpperCase();  // normalize input
 
-    if (!validStatuses.includes(upperStatus)) {
+    if (!VALID_STATUSES.includes(upperStatus)) {
       throw new ValidationError(
-        `Invalid order status. Must be one of: ${validStatuses.join(', ')}`,
+        `Invalid order status. Must be one of: ${VALID_STATUSES.join(', ')}`,
         'status'
       );
     }
@@ -310,9 +494,49 @@ const orderValidation = {
   }
 
 };
+const validateProductData=(productData)=>{
+    const errors = [];
+  const validatedData = {};
 
+  // Helper function to safely validate payment fields
+  const safeValidate = (validationFn, value, fieldName) => {
+    try {
+      return validationFn(value, fieldName);
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        errors.push({
+          field: error.field,
+          message: error.message
+        });
+        return null;
+      } else {
+        console.error(`safeValidate unknown error for ${fieldName}:`, error.message, error.stack)
+        errors.push({
+          field: fieldName,
+          message: 'validation error occurred'
+        });
+        return null;
+      }
+    }
+  };
+  validatedData.slug=safeValidate(productValidation.validateSlug,productData.slug,'slug')
+  validatedData.title=safeValidate(productValidation.validateTitle,productData.title,'title')
+  validatedData.mainImage=safeValidate(productValidation.validateMainImage,productData.mainImage,'mainImage')
+  validatedData.price=safeValidate(productValidation.validatePrice,productData.price,'price')
+  validatedData.description = safeValidate(productValidation.validateDescription, productData.description, 'description');
+  validatedData.manufacturer = safeValidate(productValidation.validateManufacturer, productData.manufacturer, 'manufacturer');
+  validatedData.categoryId = safeValidate(productValidation.validateCategoryId, productData.categoryId, 'categoryId');
+  validatedData.inStock = safeValidate(productValidation.validateInStock, productData.inStock, 'inStock');
+  
+  return {
+    isValid: errors.length === 0,
+    errors,
+    validatedData
+  };
+}
 // Comprehensive order validation - FIXED VERSION
-const validateOrderData = (orderData) => {
+const validateOrderData = (orderData,options={}) => {
+  const {requireStatus=true, requireTotal=true}=options
   const errors = [];
   const validatedData = {};
 
@@ -342,14 +566,20 @@ const validateOrderData = (orderData) => {
   validatedData.lastname = safeValidate(orderValidation.validateName, orderData.lastname, 'lastname');
   validatedData.email = safeValidate(orderValidation.validateEmail, orderData.email, 'email');
   validatedData.phone = safeValidate(orderValidation.validatePhone, orderData.phone, 'phone');
-  validatedData.company = orderData.company?safeValidate(orderValidation.validateAddress, orderData.company, 'company'):null;
+  validatedData.company = orderData.company?safeValidate(orderValidation.validateAddress, orderData.company, 'company'):'';
   validatedData.address = safeValidate(orderValidation.validateAddress, orderData.address, 'address');
   validatedData.apartment = safeValidate(orderValidation.validateAddress, orderData.apartment, 'apartment');
   validatedData.city = safeValidate(orderValidation.validateAddress, orderData.city, 'city');
   validatedData.country = safeValidate(orderValidation.validateAddress, orderData.country, 'country');
   validatedData.postalCode = safeValidate(orderValidation.validatePostalCode, orderData.postalCode, 'postalCode');
-  validatedData.total = safeValidate(orderValidation.validateTotal, orderData.total, 'total');
-  validatedData.status = safeValidate(orderValidation.validateStatus, orderData.status || 'pending', 'status');
+  
+  if (requireTotal) {
+    validatedData.total = safeValidate(orderValidation.validateTotal, orderData.total, 'total');
+  }
+  
+  if (requireStatus) {
+    validatedData.status = safeValidate(orderValidation.validateStatus, orderData.status || 'pending', 'status');
+  }
   
   // Optional fields
 
@@ -380,7 +610,7 @@ const validatePaymentData = (paymentData) => {
   // Helper function to safely validate payment fields
   const safeValidatePayment = (validationFn, value, fieldName) => {
     try {
-      return validationFn(value, paymentData.cardNumber);
+      return validationFn(value,fieldName);
     } catch (error) {
       if (error instanceof ValidationError) {
         errors.push({
@@ -445,7 +675,9 @@ module.exports = {
   paymentValidation,
   orderValidation,
   validateOrderData,
-  validatePaymentData
+  validatePaymentData,
+  validateProductData,
+  productValidation,
 };
 
   

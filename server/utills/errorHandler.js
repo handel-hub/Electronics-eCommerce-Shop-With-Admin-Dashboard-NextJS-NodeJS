@@ -111,6 +111,7 @@ const handleServerError = (error, res, context = "") => {
   logError(error, context);
 
   // Custom application errors
+  
   if (error instanceof AppError) {
     res.status(error.statusCode).json({
       error: error.message,
@@ -118,7 +119,13 @@ const handleServerError = (error, res, context = "") => {
     });
     return;
   }
-
+  if (error && error.name === 'ValidationError') {
+    res.status(400).json({
+      error: "Validation failed",
+      details: [{ field: error.field, message: error.message }]
+    });
+    return;
+  }
   // Prisma errors
   if (error && typeof error === "object" && "code" in error) {
     const errorResponse = handlePrismaError(error);

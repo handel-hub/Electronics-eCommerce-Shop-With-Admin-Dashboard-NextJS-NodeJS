@@ -1,5 +1,6 @@
 const prisma = require("../utills/db"); // ✅ Use shared connection with SSL
 const { asyncHandler, handleServerError, AppError } = require("../utills/errorHandler");
+const { validateProductData, productValidation } = require('../utills/validation');
 
 const PAGE_SIZE = 12
 
@@ -249,46 +250,62 @@ const getAllProducts = asyncHandler(async (request, response) => {
 });
 
 const createProduct = asyncHandler(async (request, response) => {
-  const {
-    slug,
-    title,
-    mainImage,
-    price,
-    description,
-    manufacturer,
-    categoryId,
-    inStock,
-  } = request.body;
-
-  if (!title) {
+  
+  if (!request.body || typeof request.body !== 'object') {
+      throw new AppError("Request body must be a valid JSON object or Invalid request body", 400);
+  }
+/*   if (!title) {
     throw new AppError("Missing required field: title", 400);
   }
-  
-  // Basic validation
   if (!slug) {
     throw new AppError("Missing required field: slug", 400);
   }
-
   if (!price) {
-    throw new AppError("Missing required field: price", 400);
+    throw new AppError("Price must be a positive number", 400);
   }
-
   if (!categoryId) {
     throw new AppError("Missing required field: categoryId", 400);
+  }
+  if (!mainImage) {
+    throw new AppError("Missing required field: mainImage", 400);
+  }
+  if (!description) {
+    throw new AppError("Missing required field: description", 400);
+  }
+  if (!manufacturer) {
+    throw new AppError("Missing required field: manufacturer", 400);
+  } */
+  
+  const validation = validateProductData(request.body);
+    
+  if (!validation.isValid) {
+    console.error("❌ Validation failed:", validation.errors);
+    return response.status(400).json({
+      error: "Validation failed",
+      details: validation.errors
+    });
+  }
+  const validatedData = validation.validatedData;
+
+  const existing = await prisma.product.findUnique({
+    where: { slug: validatedData.slug }
+  });
+  if (existing) {
+    throw new AppError("A product with this slug already exists", 409);
   }
 
   const product = await prisma.product.create({
     data: {
       merchantId: process.env.STORE_MERCHANT_ID,
-      slug,
-      title,
-      mainImage,
-      price,
+      slug:validatedData.slug,
+      title:validatedData.title,
+      mainImage:validatedData.mainImage,
+      price:validatedData.price,
       rating: 5,
-      description,
-      manufacturer,
-      categoryId,
-      inStock,
+      description:validatedData.description,
+      manufacturer:validatedData.manufacturer,
+      categoryId:validatedData.categoryId,
+      inStock:validatedData.inStock??1,
     },
   });
   return response.status(201).json(product);
@@ -297,51 +314,64 @@ const createProduct = asyncHandler(async (request, response) => {
 // Method for updating existing product
 const updateProduct = asyncHandler(async (request, response) => {
   const { id } = request.params;
-  const {
-    slug,
-    title,
-    mainImage,
-    price,
-    rating,
-    description,
-    manufacturer,
-    categoryId,
-    inStock,
-  } = request.body;
-
+;
   // Basic validation
-  if (!id) {
-    throw new AppError("Product ID is required", 400);
+  if (!id|| typeof id !== 'string') {
+    throw new AppError("Product ID is required or id must be a number", 400);
   }
-
-  // Finding a product by id
-  const existingProduct = await prisma.product.findUnique({
-    where: {
-      id,
-    },
-  });
-
+  if (!request.body || typeof request.body !== 'object') {
+      console.error("❌ Invalid request body");
+      throw new AppError("Request body must be a valid JSON object or Invalid request body", 400);
+  }
+  const existingProduct = await prisma.product.findUnique({ where: { id } });
   if (!existingProduct) {
     throw new AppError("Product not found", 404);
   }
 
-  // Updating found product
+  // Only validate and update fields that were actually sent
+  const updateData = {};
+  const body = request.body;
+
+  if (body.title !== undefined) {
+    const r = productValidation.validateTitle(body.title);
+    updateData.title = r;
+  }
+  if (body.slug !== undefined) {
+    const r = productValidation.validateSlug(body.slug);
+    updateData.slug = r;
+  }
+  if (body.mainImage !== undefined) {
+    const r = productValidation.validateMainImage(body.mainImage);
+    updateData.mainImage = r;
+  }
+  if (body.price !== undefined) {
+    const r = productValidation.validatePrice(body.price);
+    updateData.price = r;
+  }
+  if (body.description !== undefined) {
+    const r = productValidation.validateDescription(body.description);
+    updateData.description = r;
+  }
+  if (body.manufacturer !== undefined) {
+    const r = productValidation.validateManufacturer(body.manufacturer);
+    updateData.manufacturer = r;
+  }
+  if (body.categoryId !== undefined) {
+    const r = productValidation.validateCategoryId(body.categoryId);
+    updateData.categoryId = r;
+  }
+  if (body.inStock !== undefined) {
+    const r = productValidation.validateInStock(body.inStock);
+    updateData.inStock = r;
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    throw new AppError("No valid fields provided for update", 400);
+  }
+
   const updatedProduct = await prisma.product.update({
-    where: {
-      id,
-    },
-    data: {
-      merchantId: process.env.STORE_MERCHANT_ID,
-      title: title,
-      mainImage: mainImage,
-      slug: slug,
-      price: price,
-      rating: rating,
-      description: description,
-      manufacturer: manufacturer,
-      categoryId: categoryId,
-      inStock: inStock,
-    },
+    where: { id },
+    data: updateData,
   });
 
   return response.status(200).json(updatedProduct);

@@ -4,8 +4,7 @@ const { asyncHandler, AppError } = require("../utills/errorHandler");
 
 const createOrderProduct = asyncHandler(async (request, response) => {
   const { customerOrderId, productId, quantity } = request.body;
-  
-  // Validate required fields
+
   if (!customerOrderId) {
     throw new AppError("Customer order ID is required", 400);
   }
@@ -16,32 +15,45 @@ const createOrderProduct = asyncHandler(async (request, response) => {
     throw new AppError("Valid quantity is required", 400);
   }
 
-  // Verify that the customer order exists
+  const parsedQuantity = parseInt(quantity);
+
   const existingOrder = await prisma.customer_order.findUnique({
     where: { id: customerOrderId }
   });
-
   if (!existingOrder) {
     throw new AppError("Customer order not found", 404);
   }
 
-  // Verify that the product exists
   const existingProduct = await prisma.product.findUnique({
     where: { id: productId }
   });
-
   if (!existingProduct) {
     throw new AppError("Product not found", 404);
   }
 
-  // Create the order product
-  const orderProduct = await prisma.customer_order_product.create({
-    data: {
-      customerOrderId: customerOrderId,
-      productId: productId,
-      quantity: parseInt(quantity)
-    }
-  });
+  // Block order if out of stock
+  if (existingProduct.inStock < parsedQuantity) {
+    throw new AppError(
+      `Insufficient stock. Requested: ${parsedQuantity}, Available: ${existingProduct.inStock}`,
+      400
+    );
+  }
+
+  // Create order product and decrement stock atomically
+  const [orderProduct] = await prisma.$transaction([
+    prisma.customer_order_product.create({
+      data: {
+        customerOrderId,
+        productId,
+        quantity: parsedQuantity,
+        priceAtPurchase: existingProduct.price,
+      }
+    }),
+    prisma.product.update({
+      where: { id: productId },
+      data: { inStock: { decrement: parsedQuantity } }
+    })
+  ]);
 
   return response.status(201).json(orderProduct);
 });

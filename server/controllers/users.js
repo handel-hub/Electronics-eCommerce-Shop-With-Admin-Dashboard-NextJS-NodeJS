@@ -66,8 +66,8 @@ const getAllUsers = asyncHandler(async (request, response) => {
   return response.json(users.map(excludePassword));
 });
 
-const createUser = asyncHandler(async (request, response) => {
-  const { email, password, role } = request.body;
+const createUser= asyncHandler(async (request, response) => {
+  const { email, password } = request.body; 
 
   const validatedEmail = validateEmail(email);
   validatePassword(password);
@@ -86,7 +86,7 @@ const createUser = asyncHandler(async (request, response) => {
     data: {
       email: validatedEmail,
       password: hashedPassword,
-      role: role ? validateRole(role) : 'user',
+      role: 'user', // always user on registration
     },
   });
 
@@ -95,7 +95,7 @@ const createUser = asyncHandler(async (request, response) => {
 
 const updateUser = asyncHandler(async (request, response) => {
   const { id } = request.params;
-  const { email, password, role } = request.body;
+  const { email, password } = request.body; // ← remove role
 
   if (!id) throw new AppError("User ID is required", 400);
 
@@ -110,9 +110,6 @@ const updateUser = asyncHandler(async (request, response) => {
   if (password) {
     validatePassword(password);
     updateData.password = await bcrypt.hash(password, BCRYPT_ROUNDS);
-  }
-  if (role) {
-    updateData.role = validateRole(role);
   }
 
   const updatedUser = await prisma.user.update({

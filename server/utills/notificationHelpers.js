@@ -77,7 +77,6 @@ const createOrderUpdateNotification = async (userId, orderStatus, orderId, total
       }
     });
 
-    console.log(`✅ Notification created for user ${userId}: ${statusInfo.title}`);
     return notification;
   } catch (error) {
     console.error('❌ Error creating order notification:', error);
@@ -133,7 +132,6 @@ const createPaymentNotification = async (userId, paymentStatus, amount, orderId)
       }
     });
 
-    console.log(`✅ Payment notification created for user ${userId}: ${statusInfo.title}`);
     return notification;
   } catch (error) {
     console.error('❌ Error creating payment notification:', error);
@@ -164,7 +162,6 @@ const createPromotionNotification = async (userId, title, message, promoCode = n
       }
     });
 
-    console.log(`✅ Promotion notification created for user ${userId}: ${title}`);
     return notification;
   } catch (error) {
     console.error('❌ Error creating promotion notification:', error);
@@ -194,7 +191,6 @@ const createSystemAlertNotification = async (userId, title, message, priority = 
       }
     });
 
-    console.log(`✅ System alert notification created for user ${userId}: ${title}`);
     return notification;
   } catch (error) {
     console.error('❌ Error creating system alert notification:', error);
@@ -228,7 +224,6 @@ const createBulkNotifications = async (userIds, title, message, type = 'SYSTEM_A
       data: notificationData
     });
 
-    console.log(`✅ Bulk notifications created for ${userIds.length} users: ${title}`);
     return notificationData.length;
   } catch (error) {
     console.error('❌ Error creating bulk notifications:', error);

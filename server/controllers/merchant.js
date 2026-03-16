@@ -7,7 +7,7 @@ async function getAllMerchants(request, response) {
         products: true,
       },
     });
-    return response.json(merchants);
+    return response.status(200).json(merchants);
   } catch (error) {
     console.error("Error fetching merchants:", error);
     return response.status(500).json({ error: "Error fetching merchants" });
@@ -30,7 +30,7 @@ async function getMerchantById(request, response) {
       return response.status(404).json({ error: "Merchant not found" });
     }
 
-    return response.json(merchant);
+    return response.status(200).json(merchant);
   } catch (error) {
     console.error("Error fetching merchant:", error);
     return response.status(500).json({ error: "Error fetching merchant" });
